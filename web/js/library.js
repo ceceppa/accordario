@@ -1,3 +1,4 @@
+import { t } from "./i18n.js";
 import { formatKey, keyUsesFlats, parseKey } from "./chords.js";
 
 // Song library kept in localStorage.
@@ -66,7 +67,7 @@ export function saveAnalysis(analysis, { open = true } = {}) {
   };
   store.songs[entry.videoId] = entry;
   if (!writeStore(store)) {
-    throw new Error("Spazio del browser esaurito: elimina qualche brano dalla libreria.");
+    throw new Error(t("Spazio del browser esaurito: elimina qualche brano dalla libreria."));
   }
   return entry;
 }
@@ -139,7 +140,7 @@ export function exportLibrary() {
 /** Merge songs from an exported file. Returns how many were imported. */
 export async function importLibrary(file) {
   const data = JSON.parse(await file.text());
-  if (!data || typeof data.songs !== "object") throw new Error("File non valido");
+  if (!data || typeof data.songs !== "object") throw new Error(t("File non valido"));
   const store = readStore();
   let count = 0;
   for (const [id, song] of Object.entries(data.songs)) {
@@ -147,7 +148,7 @@ export async function importLibrary(file) {
     store.songs[id] = song;
     count++;
   }
-  if (!writeStore(store)) throw new Error("Spazio del browser esaurito");
+  if (!writeStore(store)) throw new Error(t("Spazio del browser esaurito"));
   return count;
 }
 

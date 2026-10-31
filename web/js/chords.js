@@ -1,3 +1,4 @@
+import { t } from "./i18n.js";
 // Chord parsing, spelling, transposition and voicings.
 // Pitch classes use C = 0 … B = 11.
 
@@ -92,7 +93,7 @@ export function noteName(pc, { flats = false, solfege = false } = {}) {
 
 /** Human readable chord name, e.g. "F♯m" or "Fa♯m". */
 export function formatChord(chord, opts = {}) {
-  if (!chord) return "N.C.";
+  if (!chord) return "";
   if (chord.root === null) return chord.raw;
   if (chord.quality === null) return noteName(chord.root, opts) + chord.rest;
   return noteName(chord.root, opts) + chord.quality;
@@ -100,7 +101,7 @@ export function formatChord(chord, opts = {}) {
 
 export function formatKey(key, opts = {}) {
   if (!key) return "—";
-  return noteName(key.root, opts) + (key.minor ? " minore" : " maggiore");
+  return noteName(key.root, opts) + " " + t(key.minor ? "minore" : "maggiore");
 }
 
 export function chordId(chord) {

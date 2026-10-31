@@ -89,6 +89,7 @@ kbd {
   border: 1px solid transparent; background: transparent; cursor: pointer; color: var(--muted);
 }
 .icon-btn:hover { background: var(--surface-2); color: var(--text); }
+.lang-select { flex: none; width: auto; }
 
 .chip {
   height: 28px; padding: 0 12px; border-radius: 999px;
@@ -317,6 +318,9 @@ body.resizing iframe { pointer-events: none; }
 .now-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
 .now-name { font-size: 40px; font-weight: 800; line-height: 1.05; min-width: 110px; letter-spacing: -0.02em; color: var(--accent-strong); }
 .next-name { font-size: 22px; font-weight: 700; }
+.now-next { display: flex; align-items: center; gap: 14px; padding-left: 24px; }
+.now-next-group { display: flex; flex-direction: row; gap: 18px; }
+.now-next-text > * { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .now-diagram { min-width: 76px; }
 .now-diagram .diagram.guitar { width: 76px; }
 .now-diagram .diagram.piano { width: 120px; }
@@ -441,3 +445,5 @@ svg.diagram { height: auto; display: block; }
   .song-left, .song-right { padding-left: 12px; padding-right: 12px; }
   .transport { margin: 0 -12px; padding: 8px 12px; }
 }
+.now-diagram-wrap { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.now-notes { font-size: 12px; opacity: 0.75; white-space: nowrap; }

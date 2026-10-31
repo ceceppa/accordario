@@ -1,0 +1,14 @@
+[
+  {
+    "code": "it",
+    "name": "Italiano",
+    "flag": "🇮🇹",
+    "locale": "it-IT"
+  },
+  {
+    "code": "en",
+    "name": "English",
+    "flag": "🇬🇧",
+    "locale": "en-GB"
+  }
+]

@@ -24,6 +24,7 @@
         <span class="long">Più brani</span>
       </button>
     </form>
+    <select id="lang-select" class="lang-select" title="Cambia lingua" aria-label="Cambia lingua"></select>
   </header>
 
   <div class="layout">
@@ -199,11 +200,17 @@
               <div class="now-label">Ora</div>
               <div id="now-name" class="now-name">—</div>
             </div>
-            <div id="now-diagram" class="now-diagram"></div>
+            <div class="now-diagram-wrap"><div id="now-diagram" class="now-diagram"></div><div id="now-notes" class="now-notes"></div></div>
             <div class="now-next">
-              <div class="now-label">Poi</div>
-              <div id="next-name" class="next-name">—</div>
-              <div id="next-in" class="muted small"></div>
+              <div class="now-next-text">
+                <div class="now-next-group">
+                  <div>
+                    <div class="now-label">Poi</div>
+                    <div id="next-name" class="next-name">—</div>
+                  </div>
+                </div>
+                <div id="next-in" class="muted small"></div>
+              </div>
             </div>
             <div class="now-info">
               <div><span class="muted">Tonalità</span> <b id="info-key">—</b></div>

@@ -1,6 +1,7 @@
 import * as api from "./api.js";
+import { lang, languages, locale, setLang, t, tn, translatePage } from "./i18n.js";
 import {
-  chordId, chordToLabel, diatonicChords, formatChord, formatKey, keyUsesFlats,
+  chordId, chordTones, chordToLabel, diatonicChords, formatChord, formatKey, keyUsesFlats, noteName,
   parseChord, parseKey, transposeChord,
 } from "./chords.js";
 import { guitarDiagram, pianoDiagram } from "./diagrams.js";
@@ -12,12 +13,12 @@ import { Transport } from "./transport.js";
 const $ = (id) => document.getElementById(id);
 
 const STEM_LABELS = {
-  vocals: ["Voce", ""],
-  drums: ["Batteria", ""],
-  bass: ["Basso", ""],
-  guitar: ["Chitarra", ""],
-  piano: ["Piano", ""],
-  other: ["Altro", "synth, organo, archi…"],
+  vocals: [t("Voce"), ""],
+  drums: [t("Batteria"), ""],
+  bass: [t("Basso"), ""],
+  guitar: [t("Chitarra"), ""],
+  piano: [t("Piano"), ""],
+  other: [t("Altro"), t("synth, organo, archi…")],
 };
 const STEM_PRESETS = {
   all: {},
@@ -80,10 +81,10 @@ function fmtTime(sec) {
 function relTime(ts) {
   if (!ts) return "";
   const days = Math.floor((Date.now() - ts) / 86400000);
-  if (days <= 0) return "oggi";
-  if (days === 1) return "ieri";
-  if (days < 30) return `${days} giorni fa`;
-  return new Date(ts).toLocaleDateString("it-IT");
+  if (days <= 0) return t("oggi");
+  if (days === 1) return t("ieri");
+  if (days < 30) return t("{n} giorni fa", { n: days });
+  return new Date(ts).toLocaleDateString(locale);
 }
 
 function escapeHtml(text) {
@@ -124,11 +125,11 @@ function beatIndexAt(t) {
 function renderLibrary() {
   const all = lib.listSongs().length;
   const songs = lib.searchSongs($("lib-search").value, $("lib-sort").value);
-  $("lib-count").textContent = all ? `${all} ${all === 1 ? "brano" : "brani"}` : "";
-  $("lib-usage").textContent = all ? `${lib.storageUsageKB()} KB usati` : "";
+  $("lib-count").textContent = all ? tn(all, "{n} brano", "{n} brani") : "";
+  $("lib-usage").textContent = all ? t("{n} KB usati", { n: lib.storageUsageKB() }) : "";
   const list = $("lib-list");
   if (!songs.length) {
-    list.innerHTML = `<li class="lib-empty">${all ? "Nessun brano trovato." : "Ancora nessun brano.<br>Incolla un link YouTube per iniziare."}</li>`;
+    list.innerHTML = `<li class="lib-empty">${all ? t("Nessun brano trovato.") : t("Ancora nessun brano.<br>Incolla un link YouTube per iniziare.")}</li>`;
     return;
   }
   const solfege = state.prefs.notation === "solfege";
@@ -136,11 +137,11 @@ function renderLibrary() {
     const key = parseKey(s.analysis?.key);
     const keyText = key ? formatKey(key, { flats: keyUsesFlats(key), solfege }) : "";
     const sub = [s.channel, keyText, relTime(s.openedAt ?? s.addedAt)].filter(Boolean).join(" · ");
-    const badge = s.openedAt == null ? `<span class="new">nuovo</span>` : "";
+    const badge = s.openedAt == null ? `<span class="new">${t("nuovo")}</span>` : "";
     return `<li class="lib-item${s.videoId === state.videoId ? " active" : ""}" data-id="${s.videoId}">
       <img loading="lazy" alt="" src="https://i.ytimg.com/vi/${s.videoId}/mqdefault.jpg">
       <div><div class="t">${escapeHtml(s.title)}</div><div class="s">${badge}${escapeHtml(sub)}</div></div>
-      <button class="icon-btn del" title="Elimina dalla libreria" aria-label="Elimina">
+      <button class="icon-btn del" title="${t("Elimina dalla libreria")}" aria-label="${t("Elimina")}">
         <svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>
       </button>
     </li>`;
@@ -156,12 +157,12 @@ function setLibraryOpen(open) {
 
 function deleteFromLibrary(videoId) {
   const song = lib.getSong(videoId);
-  if (!song || !confirm(`Eliminare "${song.title}" dalla libreria?\nVerranno cancellati anche l'audio e le tracce separate salvati sul server.`)) return;
+  if (!song || !confirm(t("Eliminare \"{title}\" dalla libreria?\nVerranno cancellati anche l'audio e le tracce separate salvati sul server.", { title: song.title }))) return;
   lib.deleteSong(videoId);
   api.deleteServerSong(videoId).catch(() => {});
   if (videoId === state.videoId) location.hash = "";
   renderLibrary();
-  toast("Brano eliminato");
+  toast(t("Brano eliminato"));
 }
 
 // ---------------------------------------------------------------- song loading
@@ -217,9 +218,9 @@ async function openVideo(videoId, { force = false } = {}) {
   $("analysis-error").hidden = true;
   $("analysis-state").hidden = false;
   $("analysis-bar").style.width = "0%";
-  $("analysis-msg").textContent = "Avvio l'analisi…";
-  $("song-title").textContent = lib.getSong(videoId)?.title ?? "Nuovo brano";
-  $("song-sub").textContent = "Analisi in corso…";
+  $("analysis-msg").textContent = t("Avvio l'analisi…");
+  $("song-title").textContent = lib.getSong(videoId)?.title ?? t("Nuovo brano");
+  $("song-sub").textContent = t("Analisi in corso…");
   resetNowPanel();
   renderLibrary();
   loadStemsState(videoId);
@@ -232,7 +233,7 @@ async function openVideo(videoId, { force = false } = {}) {
         res.jobId,
         (job) => {
           if (token !== state.analyzeToken) return;
-          $("analysis-msg").textContent = job.message;
+          $("analysis-msg").textContent = t(job.message);
           $("analysis-bar").style.width = `${Math.round(job.progress * 100)}%`;
         },
         () => token !== state.analyzeToken,
@@ -245,8 +246,8 @@ async function openVideo(videoId, { force = false } = {}) {
     if (token !== state.analyzeToken || err.message === "cancelled") return;
     $("analysis-state").hidden = true;
     $("analysis-error").hidden = false;
-    $("analysis-error-msg").textContent = err.message;
-    $("song-sub").textContent = "Analisi non riuscita";
+    $("analysis-error-msg").textContent = t(err.message);
+    $("song-sub").textContent = t("Analisi non riuscita");
   }
 }
 
@@ -286,7 +287,7 @@ function applyEntry(entry) {
   }
 }
 
-const AUDIO_ONLY_MSG = "Il proprietario permette di vederlo solo su YouTube: qui suono l'audio scaricato.";
+const AUDIO_ONLY_MSG = t("Il proprietario permette di vederlo solo su YouTube: qui suono l'audio scaricato.");
 
 const isKnownBlocked = (entry) => !!entry && (entry.embedBlocked || entry.analysis?.embeddable === false);
 
@@ -301,7 +302,7 @@ function setVideoHidden(hidden) {
     $("audio-only-link").href = `https://www.youtube.com/watch?v=${state.videoId}`;
     $("audio-only-msg").textContent = state.analysis
       ? AUDIO_ONLY_MSG
-      : "Il proprietario permette di vederlo solo su YouTube: l'audio sarà pronto a fine analisi.";
+      : t("Il proprietario permette di vederlo solo su YouTube: l'audio sarà pronto a fine analisi.");
   }
 }
 
@@ -327,6 +328,7 @@ function resetNowPanel() {
   $("next-name").textContent = "—";
   $("next-in").textContent = "";
   $("now-diagram").innerHTML = "";
+  $("now-notes").textContent = "";
   $("info-key").textContent = "—";
   $("info-bpm").textContent = "—";
   $("info-bar").textContent = "—";
@@ -343,7 +345,7 @@ function refreshChords() {
   const capo = state.prefs.instrument === "guitar" ? s.capo : 0;
   state.shift = s.transpose - capo;
   $("capo").disabled = state.prefs.instrument !== "guitar";
-  $("capo").title = $("capo").disabled ? "Il capo vale solo per la chitarra" : "";
+  $("capo").title = $("capo").disabled ? t("Il capo vale solo per la chitarra") : "";
   const key = parseKey(a.key);
   const solfege = state.prefs.notation === "solfege";
   state.shownKey = key && { ...key, root: (key.root + state.shift + 120) % 12 };
@@ -386,6 +388,8 @@ function updateNow(i) {
   if (id !== state.nowDiagramId) {
     state.nowDiagramId = id;
     $("now-diagram").innerHTML = i >= 0 && state.chords[i] ? drawDiagram(state.chords[i]) : "";
+    const tones = i >= 0 ? chordTones(state.chords[i]) : [];
+    $("now-notes").textContent = tones.map((pc) => noteName(pc, state.fmt)).join(" · ");
     document.querySelectorAll(".diag.current").forEach((d) => d.classList.remove("current"));
     if (id) document.querySelector(`.diag[data-id="${CSS.escape(id)}"]`)?.classList.add("current");
   }
@@ -395,7 +399,7 @@ function updateNow(i) {
   if (j < n) {
     $("next-name").textContent = state.names[j];
     const beats = j - Math.max(i, -1);
-    $("next-in").textContent = i < 0 ? "all'inizio" : beats === 1 ? "al prossimo battito" : `tra ${beats} battiti`;
+    $("next-in").textContent = i < 0 ? t("all'inizio") : beats === 1 ? t("al prossimo battito") : t("tra {n} battiti", { n: beats });
   } else {
     $("next-name").textContent = "—";
     $("next-in").textContent = "";
@@ -434,11 +438,11 @@ function updateLoop() {
     : null;
   $("loop-toggle").disabled = !sel;
   $("loop-toggle").classList.toggle("active", state.loopOn && !!sel);
-  $("loop-toggle").querySelector("span").textContent = state.loopOn && sel ? "In loop" : "Ripeti";
+  $("loop-toggle").querySelector("span").textContent = state.loopOn && sel ? t("In loop") : t("Ripeti");
   $("loop-clear").disabled = !sel;
   if (sel) {
     const a = state.barOf[sel.from], b = state.barOf[sel.to];
-    const bars = a === b ? `Misura ${a}` : `Misure ${a}–${b}`;
+    const bars = a === b ? t("Misura {n}", { n: a }) : t("Misure {a}–{b}", { a, b });
     $("loop-range").textContent = `${bars} · ${fmtTime(state.analysis.beats[sel.from])}–${fmtTime(beatEnd(sel.to))}`;
   } else {
     $("loop-range").textContent = "Trascina sulla griglia per selezionare";
@@ -480,10 +484,10 @@ function openEditor(i, x, y) {
   state.editing = i;
   const pop = $("edit-pop");
   const input = $("edit-input");
-  input.value = state.chords[i] ? formatChord(state.chords[i], { flats: state.fmt.flats, solfege: state.fmt.solfege }).replace("♯", "#").replace("♭", "b") : "N";
+  input.value = state.chords[i] ? formatChord(state.chords[i], { flats: state.fmt.flats, solfege: state.fmt.solfege }).replace("♯", "#").replace("♭", "b") : "";
   const suggestions = [...diatonicChords(state.shownKey), null];
   $("edit-suggest").innerHTML = suggestions.map((c) =>
-    `<button type="button" class="chip" data-label="${escapeHtml(c ? formatChord(c, state.fmt) : "N")}">${escapeHtml(formatChord(c, state.fmt))}</button>`,
+    `<button type="button" class="chip" data-label="${escapeHtml(c ? formatChord(c, state.fmt) : "N")}">${c ? escapeHtml(formatChord(c, state.fmt)) : "—"}</button>`,
   ).join("");
   pop.hidden = false;
   const w = pop.offsetWidth, h = pop.offsetHeight;
@@ -520,7 +524,7 @@ function applyEdit(text, reset = false) {
     if (t && !/^(n|nc|n\.c\.?)$/i.test(t)) {
       const chord = parseChord(t);
       if (!chord || chord.root === null || chord.quality === null) {
-        toast("Accordo non riconosciuto. Esempi: Am, F#, Bb7, Cmaj7, Dsus4, Sol, Lam");
+        toast(t("Accordo non riconosciuto. Esempi: Am, F#, Bb7, Cmaj7, Dsus4, Sol, Lam"));
         return;
       }
       label = chordToLabel(transposeChord(chord, -state.shift));
@@ -554,7 +558,7 @@ async function loadStemsState(videoId) {
     if (res.available) setStemsReady(res.info);
     else if (res.jobId) followStemsJob(res.jobId, token);
   } catch {
-    if (token === state.stems.token) $("stems-status").textContent = "server non raggiungibile";
+    if (token === state.stems.token) $("stems-status").textContent = t("server non raggiungibile");
   }
 }
 
@@ -573,28 +577,28 @@ async function startStems() {
     if (res.status === "done") setStemsReady(res.result);
     else followStemsJob(res.jobId, token);
   } catch (err) {
-    toast(err.message);
+    toast(t(err.message));
   }
 }
 
 async function followStemsJob(jobId, token) {
   state.stems.following = true;
   showStemsPanel("progress");
-  $("stems-status").textContent = "in corso";
+  $("stems-status").textContent = t("in corso");
   try {
     const info = await api.waitForJob(jobId, (job) => {
       if (token !== state.stems.token) return;
       $("stems-bar").style.width = `${Math.round(job.progress * 100)}%`;
-      $("stems-msg").textContent = job.message;
+      $("stems-msg").textContent = t(job.message);
     }, () => token !== state.stems.token);
     if (token !== state.stems.token) return;
     setStemsReady(info);
-    toast("Tracce separate pronte");
+    toast(t("Tracce separate pronte"));
   } catch (err) {
     if (err.message === "cancelled" || token !== state.stems.token) return;
     showStemsPanel("idle");
-    $("stems-status").textContent = "errore";
-    toast(`Separazione non riuscita: ${err.message}`, 6000);
+    $("stems-status").textContent = t("errore");
+    toast(t("Separazione non riuscita: {msg}", { msg: t(err.message) }), 6000);
   } finally {
     if (token === state.stems.token) state.stems.following = false;
   }
@@ -605,7 +609,7 @@ function setStemsReady(info) {
   const saved = state.entry?.settings.stemMix;
   state.stems.mix = { ...defaultMix(info.stems), ...(saved ?? {}) };
   showStemsPanel("ready");
-  $("stems-status").textContent = "pronte";
+  $("stems-status").textContent = t("pronte");
   renderMixer();
   const active = transport.mode === "audio" && transport.audio.dataset.url === info.url;
   $("stems-enable").checked = active;
@@ -620,9 +624,9 @@ function renderMixer() {
     const m = mix[name];
     return `<div class="mix-row" data-stem="${name}">
       <span class="name">${label}${hint ? ` <small>${hint}</small>` : ""}</span>
-      <button class="mix-btn solo${m.solo ? " on" : ""}" data-act="solo" title="Solo: ascolta solo le tracce in solo">S</button>
-      <button class="mix-btn mute${m.mute ? " on" : ""}" data-act="mute" title="Muto">M</button>
-      <input type="range" min="0" max="1.5" step="0.01" value="${m.gain}" data-act="gain" aria-label="Volume ${label}">
+      <button class="mix-btn solo${m.solo ? " on" : ""}" data-act="solo" title="${t("Solo: ascolta solo le tracce in solo")}">S</button>
+      <button class="mix-btn mute${m.mute ? " on" : ""}" data-act="mute" title="${t("Muto")}">M</button>
+      <input type="range" min="0" max="1.5" step="0.01" value="${m.gain}" data-act="gain" aria-label="${t("Volume {name}", { name: label })}">
     </div>`;
   }).join("");
   applyGains();
@@ -650,14 +654,14 @@ async function enableStems(on) {
     if (on) {
       await transport.enableAudio(info.url, info.stems.length);
       applyGains();
-      $("video-overlay-text").textContent = "Audio dalle tracce separate · clic per play/pausa";
+      $("video-overlay-text").textContent = t("Audio dalle tracce separate · clic per play/pausa");
     } else if (state.videoBlocked) {
       await useSourceAudio();
     } else {
       transport.disableAudio();
     }
   } catch (err) {
-    toast(err.message);
+    toast(t(err.message));
     on = false;
   }
   $("stems-enable").checked = on;
@@ -672,7 +676,7 @@ async function useSourceAudio() {
     await transport.enableAudio(`/media/${state.videoId}/source`, 0);
     $("video-overlay").hidden = true;
   } catch {
-    $("audio-only-msg").textContent = "L'audio scaricato non è più sul server: usa \"Rianalizza\" per scaricarlo di nuovo.";
+    $("audio-only-msg").textContent = t("L'audio scaricato non è più sul server: usa \"Rianalizza\" per scaricarlo di nuovo.");
   }
 }
 
@@ -692,9 +696,9 @@ function renderQueue() {
     const waiting = !failed && (item.status !== "running" || /attesa|coda/i.test(item.message || ""));
     const pct = Math.round((item.progress || 0) * 100);
     const title = item.title || lib.getSong(item.videoId)?.title || `Video ${item.videoId}`;
-    let status = failed ? item.error || "Errore" : item.message || "In coda…";
+    let status = failed ? t(item.error || "Errore") : t(item.message || "In coda…");
     if (!failed && !waiting && pct > 0 && pct < 100) status += ` ${pct}%`;
-    if (item.stage === "stems" && !failed) status = `Tracce · ${status}`;
+    if (item.stage === "stems" && !failed) status = t("Tracce · {status}", { status });
     return `<li class="q-item${failed ? " error" : ""}${waiting ? " waiting" : ""}" data-id="${item.videoId}" title="${escapeHtml(title)}">
       <img loading="lazy" alt="" src="https://i.ytimg.com/vi/${item.videoId}/mqdefault.jpg">
       <div style="min-width:0">
@@ -703,8 +707,8 @@ function renderQueue() {
         ${failed ? "" : `<div class="bar"><div style="width:${pct}%"></div></div>`}
       </div>
       <div class="q-actions">
-        ${failed ? `<button class="icon-btn" data-act="retry" title="Riprova" aria-label="Riprova">${ICON_RETRY}</button>` : ""}
-        <button class="icon-btn" data-act="remove" title="Togli dalla coda" aria-label="Togli dalla coda">${ICON_X}</button>
+        ${failed ? `<button class="icon-btn" data-act="retry" title="${t("Riprova")}" aria-label="${t("Riprova")}">${ICON_RETRY}</button>` : ""}
+        <button class="icon-btn" data-act="remove" title="${t("Togli dalla coda")}" aria-label="${t("Togli dalla coda")}">${ICON_X}</button>
       </div>
     </li>`;
   }).join("");
@@ -720,9 +724,9 @@ function openBatchDialog(text = "") {
 function updateBatchSummary() {
   const { videos, playlists } = api.countLinks($("batch-text").value);
   const parts = [];
-  if (videos) parts.push(`${videos} ${videos === 1 ? "brano" : "brani"}`);
+  if (videos) parts.push(tn(videos, "{n} brano", "{n} brani"));
   if (playlists) parts.push(`${playlists} playlist`);
-  $("batch-summary").textContent = parts.length ? `Riconosciuti: ${parts.join(" + ")}` : "Nessun link riconosciuto.";
+  $("batch-summary").textContent = parts.length ? t("Riconosciuti: {parts}", { parts: parts.join(" + ") }) : t("Nessun link riconosciuto.");
   $("batch-submit").disabled = !parts.length;
 }
 
@@ -730,7 +734,7 @@ async function submitBatch() {
   const button = $("batch-submit");
   const stems = $("batch-stems").checked;
   button.disabled = true;
-  button.textContent = "Leggo i link…";
+  button.textContent = t("Leggo i link…");
   try {
     const res = await api.resolveLinks($("batch-text").value);
     const fresh = [];
@@ -749,19 +753,19 @@ async function submitBatch() {
     $("batch-dialog").close();
 
     const parts = [];
-    if (fresh.length) parts.push(`${fresh.length} ${fresh.length === 1 ? "brano aggiunto" : "brani aggiunti"} alla coda`);
-    if (stemsOnly.length) parts.push(`${stemsOnly.length} già in libreria: separo solo le tracce`);
-    else if (inLibrary) parts.push(`${inLibrary} già in libreria`);
-    if (inQueue) parts.push(`${inQueue} già in coda`);
-    if (!parts.length) parts.push("Niente di nuovo da aggiungere");
-    if (res.invalid.length) parts.push(`${res.invalid.length} non riconosciuti`);
-    if (res.playlistErrors.length) parts.push(`playlist non leggibile: ${res.playlistErrors[0]}`);
+    if (fresh.length) parts.push(tn(fresh.length, "{n} brano aggiunto alla coda", "{n} brani aggiunti alla coda"));
+    if (stemsOnly.length) parts.push(t("{n} già in libreria: separo solo le tracce", { n: stemsOnly.length }));
+    else if (inLibrary) parts.push(t("{n} già in libreria", { n: inLibrary }));
+    if (inQueue) parts.push(t("{n} già in coda", { n: inQueue }));
+    if (!parts.length) parts.push(t("Niente di nuovo da aggiungere"));
+    if (res.invalid.length) parts.push(t("{n} non riconosciuti", { n: res.invalid.length }));
+    if (res.playlistErrors.length) parts.push(t("playlist non leggibile: {msg}", { msg: res.playlistErrors[0] }));
     toast(parts.join(" · "), 6000);
     if (fresh.length || stemsOnly.length) setLibraryOpen(true);
   } catch (err) {
-    toast(err.message, 6000);
+    toast(t(err.message), 6000);
   } finally {
-    button.textContent = "Aggiungi alla coda";
+    button.textContent = t("Aggiungi alla coda");
     updateBatchSummary();
   }
 }
@@ -807,7 +811,14 @@ function setSegmented(el, value) {
 }
 
 function init() {
-  fillSelect($("capo"), Array.from({ length: 12 }, (_, i) => [i, i === 0 ? "Nessuno" : `${i}° tasto`]));
+  translatePage();
+  const langSel = $("lang-select");
+  langSel.innerHTML = languages.map((l) =>
+    `<option value="${l.code}">${l.flag ?? ""} ${escapeHtml(l.name)}</option>`).join("");
+  langSel.value = lang;
+  langSel.hidden = languages.length < 2;
+  langSel.addEventListener("change", () => setLang(langSel.value));
+  fillSelect($("capo"), Array.from({ length: 12 }, (_, i) => [i, i === 0 ? t("Nessuno") : t("{n}° tasto", { n: i })]));
   fillSelect($("transpose"), Array.from({ length: 13 }, (_, k) => {
     const v = 6 - k;
     return [v, v === 0 ? "0" : v > 0 ? `+${v}` : `${v}`];
@@ -865,14 +876,14 @@ function init() {
     try {
       lib.saveAnalysis(analysis, { open: false });
     } catch (err) {
-      toast(err.message, 6000);
+      toast(t(err.message), 6000);
       return;
     }
     renderLibrary();
-    if (isNew) toast(`Pronto: ${analysis.title}`);
+    if (isNew) toast(t("Pronto: {title}", { title: analysis.title }));
   });
   queue.addEventListener("stems-done", (e) => {
-    toast(`Tracce separate pronte: ${e.detail.title ?? e.detail.videoId}`);
+    toast(t("Tracce separate pronte: {title}", { title: e.detail.title ?? e.detail.videoId }));
     if (e.detail.videoId === state.videoId) loadStemsState(state.videoId);
   });
   $("queue-list").addEventListener("click", (e) => {
@@ -907,10 +918,10 @@ function init() {
     if (!file) return;
     try {
       const n = await lib.importLibrary(file);
-      toast(`${n} ${n === 1 ? "brano importato" : "brani importati"}`);
+      toast(tn(n, "{n} brano importato", "{n} brani importati"));
       renderLibrary();
     } catch (err) {
-      toast(`Importazione non riuscita: ${err.message}`);
+      toast(t("Importazione non riuscita: {msg}", { msg: t(err.message) }));
     }
   });
 
@@ -918,11 +929,11 @@ function init() {
   $("video-overlay").addEventListener("click", () => transport.toggle());
   transport.addEventListener("state", (e) => {
     $("play-btn").classList.toggle("playing", e.detail.playing);
-    $("play-btn").setAttribute("aria-label", e.detail.playing ? "Pausa" : "Play");
+    $("play-btn").setAttribute("aria-label", e.detail.playing ? t("Pausa") : "Play");
   });
   transport.addEventListener("videoerror", (e) => {
     if (!e.detail.blocked) {
-      toast(`Errore del player YouTube (${e.detail.code})`);
+      toast(t("Errore del player YouTube ({code})", { code: e.detail.code }));
       return;
     }
     if (state.videoBlocked || !state.videoId) return;
@@ -947,7 +958,7 @@ function init() {
     setTimeout(() => {
       const actual = transport.effectiveRate();
       if (transport.mode === "video" && Math.abs(actual - rate) > 0.01) {
-        toast(`YouTube supporta ${actual}× come velocità più vicina. Con le tracce separate puoi usare qualsiasi velocità.`, 6000);
+        toast(t("YouTube supporta {v}× come velocità più vicina. Con le tracce separate puoi usare qualsiasi velocità.", { v: actual }), 6000);
       }
     }, 500);
   });
@@ -991,7 +1002,7 @@ function init() {
 
   $("reanalyze").addEventListener("click", () => {
     if (!state.videoId) return;
-    if (confirm("Rianalizzare il brano? Le correzioni manuali verranno mantenute solo se le battute non cambiano.")) {
+    if (confirm(t("Rianalizzare il brano? Le correzioni manuali verranno mantenute solo se le battute non cambiano."))) {
       openVideo(state.videoId, { force: true });
     }
   });
@@ -1075,7 +1086,7 @@ function init() {
       case "-":
         speedSel.selectedIndex = Math.max(0, Math.min(speedSel.options.length - 1, speedSel.selectedIndex + (e.key === "-" ? -1 : 1)));
         speedSel.dispatchEvent(new Event("change"));
-        toast(`Velocità ${speedSel.value}×`, 1200);
+        toast(t("Velocità {v}×", { v: speedSel.value }), 1200);
         break;
     }
   });
@@ -1089,9 +1100,9 @@ function init() {
 
   api.health().then((h) => {
     if (!h.stems) {
-      $("stems-idle").innerHTML = `<p class="muted small">Separazione tracce non installata sul server (manca Demucs).</p>`;
+      $("stems-idle").innerHTML = `<p class="muted small">${t("Separazione tracce non installata sul server (manca Demucs).")}</p>`;
     }
-  }).catch(() => toast("Server non raggiungibile: avvialo con ./start.sh", 8000));
+  }).catch(() => toast(t("Server non raggiungibile: avvialo con ./start.sh"), 8000));
 }
 
 init();

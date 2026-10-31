@@ -1,3 +1,4 @@
+import { t } from "./i18n.js";
 // Small client for the local server API.
 
 async function request(method, url, body) {
@@ -9,7 +10,7 @@ async function request(method, url, body) {
       body: body ? JSON.stringify(body) : undefined,
     });
   } catch {
-    throw new Error("Server non raggiungibile: avvialo con ./start.sh");
+    throw new Error(t("Server non raggiungibile: avvialo con ./start.sh"));
   }
   let data = null;
   try {
@@ -17,7 +18,7 @@ async function request(method, url, body) {
   } catch {
     /* empty body */
   }
-  if (!res.ok) throw new Error(data?.detail || `Errore del server (${res.status})`);
+  if (!res.ok) throw new Error(data?.detail || t("Errore del server ({status})", { status: res.status }));
   return data;
 }
 
@@ -30,7 +31,7 @@ export async function waitForJob(jobId, onProgress, isCancelled = () => false) {
     const job = await request("GET", `/api/jobs/${jobId}`);
     onProgress?.(job);
     if (job.status === "done") return job.result;
-    if (job.status === "error") throw new Error(job.error || "Analisi non riuscita");
+    if (job.status === "error") throw new Error(job.error || t("Analisi non riuscita"));
     await sleep(700);
   }
 }

@@ -1,3 +1,4 @@
+import { t } from "./i18n.js";
 // Playback transport: one clock for the whole app.
 //
 // Two modes:
@@ -167,7 +168,7 @@ export class Transport extends EventTarget {
       this.audio.src = url;
       await new Promise((resolve, reject) => {
         this.audio.addEventListener("loadedmetadata", resolve, { once: true });
-        this.audio.addEventListener("error", () => reject(new Error("Audio non caricabile")), { once: true });
+        this.audio.addEventListener("error", () => reject(new Error(t("Audio non caricabile"))), { once: true });
       });
     }
 
