@@ -22,7 +22,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #0e1015;
     --surface: #161920;
     --surface-2: #1d2129;
@@ -41,6 +41,26 @@
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.25);
     color-scheme: dark;
   }
+}
+
+:root[data-theme="dark"] {
+  --bg: #0e1015;
+  --surface: #161920;
+  --surface-2: #1d2129;
+  --border: #2a2f39;
+  --text: #e8eaef;
+  --muted: #8b93a3;
+  --accent: #2dd4bf;
+  --accent-strong: #5eead4;
+  --accent-soft: rgba(45, 212, 191, 0.14);
+  --on-accent: #062925;
+  --loop: #fbbf24;
+  --loop-soft: rgba(251, 191, 36, 0.16);
+  --danger: #f87171;
+  --beat: #1b1f27;
+  --bar-line: #3a404c;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.25);
+  color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
@@ -90,6 +110,11 @@ kbd {
 }
 .icon-btn:hover { background: var(--surface-2); color: var(--text); }
 .lang-select { flex: none; width: auto; }
+.theme-toggle { flex: none; padding: 0; width: 34px; justify-content: center; }
+.theme-toggle svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.theme-toggle .moon { display: none; }
+.dark-ui .theme-toggle .sun { display: none; }
+.dark-ui .theme-toggle .moon { display: block; }
 
 .chip {
   height: 28px; padding: 0 12px; border-radius: 999px;

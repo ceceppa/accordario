@@ -812,6 +812,18 @@ function setSegmented(el, value) {
 
 function init() {
   translatePage();
+  const root = document.documentElement;
+  const darkMq = matchMedia("(prefers-color-scheme: dark)");
+  const isDark = () => root.dataset.theme ? root.dataset.theme === "dark" : darkMq.matches;
+  const syncTheme = () => root.classList.toggle("dark-ui", isDark());
+  syncTheme();
+  darkMq.addEventListener("change", syncTheme);
+  $("theme-toggle").addEventListener("click", () => {
+    root.dataset.theme = isDark() ? "light" : "dark";
+    try { localStorage.setItem("theme", root.dataset.theme); } catch {}
+    syncTheme();
+  });
+
   const langSel = $("lang-select");
   langSel.innerHTML = languages.map((l) =>
     `<option value="${l.code}">${l.flag ?? ""} ${escapeHtml(l.name)}</option>`).join("");

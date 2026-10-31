@@ -179,5 +179,6 @@
   "ieri": "yesterday",
   "{n} giorni fa": "{n} days ago",
   "nuovo": "new",
-  "({n} prima)": "({n} ahead)"
+  "({n} prima)": "({n} ahead)",
+  "Cambia tema": "Toggle theme"
 }
