@@ -94,7 +94,7 @@ A Python server (FastAPI) with the neural networks from
    Viterbi: chord changes prefer the downbeat of the bar, and chords in the
    detected key get a small advantage. This removes spurious one-beat chords.
 
-The vocabulary is major/minor (like the basic version of Chordify): sevenths
+The vocabulary is major/minor: sevenths
 and other chords can be added by hand with right-click. Intros with only bass
 or drums and heavily arranged passages are still the hardest cases.
 
