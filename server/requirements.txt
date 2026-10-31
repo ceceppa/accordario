@@ -1,0 +1,16 @@
+# Install order matters: numpy/cython must exist before building madmom.
+# See ../start.sh, which handles this automatically.
+numpy<2
+cython<3.1
+scipy<1.14
+mido
+madmom @ git+https://github.com/CPJKU/madmom.git
+opencv-python-headless==4.10.0.84
+yt-dlp[default]
+fastapi
+uvicorn[standard]
+soundfile
+# Stem separation (optional, large download ~1 GB)
+torch==2.5.1
+torchaudio==2.5.1
+demucs==4.0.1

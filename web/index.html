@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Accordario</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%2314b8a6'/><path d='M9 22V10l14-3v12' stroke='white' stroke-width='2.5' fill='none' stroke-linecap='round'/><circle cx='7' cy='22' r='3' fill='white'/><circle cx='21' cy='19' r='3' fill='white'/></svg>">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <button id="toggle-library" class="icon-btn" title="Libreria" aria-label="Mostra o nascondi la libreria">
+      <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+    </button>
+    <a class="brand" href="#" id="brand">
+      <span class="brand-mark"><svg viewBox="0 0 24 24"><path d="M8 17V6l10-2v10"/><circle cx="6" cy="17" r="2.2"/><circle cx="16" cy="14" r="2.2"/></svg></span>
+      <span>Accordario</span>
+    </a>
+    <form id="analyze-form" class="analyze-form" autocomplete="off">
+      <input id="url-input" type="text" placeholder="Incolla un link YouTube…" spellcheck="false" aria-label="Link YouTube">
+      <button type="submit" class="btn primary"><span class="long">Trova accordi</span><span class="short">Vai</span></button>
+      <button type="button" id="batch-open" class="btn" title="Incolla una lista di link o una playlist">
+        <svg viewBox="0 0 24 24"><path d="M4 6h11M4 12h11M4 18h7M18 15v6M15 18h6"/></svg>
+        <span class="long">Più brani</span>
+      </button>
+    </form>
+  </header>
+
+  <div class="layout">
+    <aside id="library" class="library" aria-label="Libreria">
+      <section id="queue" class="queue" hidden aria-label="Brani in elaborazione">
+        <div class="queue-head">
+          <h2>In elaborazione <span id="queue-count" class="muted"></span></h2>
+          <button id="queue-clear" class="btn ghost small" hidden>Rimuovi errori</button>
+        </div>
+        <ul id="queue-list" class="queue-list"></ul>
+      </section>
+      <div class="lib-head">
+        <h2>Libreria</h2>
+        <span id="lib-count" class="muted"></span>
+      </div>
+      <div class="lib-tools">
+        <input id="lib-search" type="search" placeholder="Cerca titolo, artista, tonalità…" aria-label="Cerca nella libreria">
+        <select id="lib-sort" aria-label="Ordina">
+          <option value="recent">Aperti di recente</option>
+          <option value="added">Aggiunti di recente</option>
+          <option value="title">Titolo A–Z</option>
+        </select>
+      </div>
+      <ul id="lib-list" class="lib-list"></ul>
+      <div class="lib-foot">
+        <button id="lib-export" class="btn ghost small" title="Scarica un backup della libreria">Esporta</button>
+        <label class="btn ghost small" title="Carica un backup">Importa<input id="lib-import" type="file" accept="application/json,.json" hidden></label>
+        <span id="lib-usage" class="muted"></span>
+      </div>
+    </aside>
+    <div id="library-scrim" class="scrim" hidden></div>
+
+    <main id="main">
+      <section id="empty-state" class="empty-state">
+        <h1>Impara le canzoni dagli accordi</h1>
+        <p>Incolla un link YouTube: Accordario scarica l'audio, riconosce battute e accordi e li mostra sincronizzati col video.</p>
+        <ol class="howto">
+          <li><b>Clic</b> su una battuta per suonare da lì.</li>
+          <li><b>Trascina</b> sulla griglia (o <kbd>Shift</kbd>+clic) per ripetere un tratto in loop.</li>
+          <li><b>Tasto destro</b> su un accordo per correggerlo.</li>
+          <li><b>Separa le tracce</b> per ascoltare solo tastiere, o toglierle e suonarci sopra.</li>
+        </ol>
+        <p class="muted shortcuts">Scorciatoie: <kbd>Spazio</kbd> play/pausa · <kbd>←</kbd>/<kbd>→</kbd> misura precedente/successiva · <kbd>L</kbd> loop · <kbd>Esc</kbd> annulla selezione · <kbd>-</kbd>/<kbd>+</kbd> velocità</p>
+      </section>
+
+      <section id="song-view" class="song-view" hidden>
+        <div class="song-left">
+          <div class="video-wrap" id="video-wrap">
+            <div id="yt-player"></div>
+            <button id="video-overlay" class="video-overlay" hidden title="Play/pausa">
+              <span id="video-overlay-text">Audio dalle tracce separate</span>
+            </button>
+          </div>
+          <div class="audio-only" id="audio-only" hidden>
+            <img id="audio-only-thumb" alt="">
+            <div>
+              <b>Video non incorporabile</b>
+              <p id="audio-only-msg" class="muted small">Il proprietario permette di vederlo solo su YouTube: qui suono l'audio scaricato.</p>
+              <a id="audio-only-link" class="small" target="_blank" rel="noopener">Guarda su YouTube ↗</a>
+            </div>
+          </div>
+
+          <div class="song-meta">
+            <div class="song-titles">
+              <h1 id="song-title">—</h1>
+              <div id="song-sub" class="muted"></div>
+            </div>
+            <button id="reanalyze" class="icon-btn" title="Rianalizza il brano" aria-label="Rianalizza">
+              <svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>
+            </button>
+          </div>
+
+          <div class="transport">
+            <button id="play-btn" class="play-btn" aria-label="Play">
+              <svg class="i-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+              <svg class="i-pause" viewBox="0 0 24 24"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>
+            </button>
+            <span id="time-now" class="time">0:00</span>
+            <input id="seek" type="range" min="0" max="100" step="0.05" value="0" aria-label="Posizione">
+            <span id="time-total" class="time">0:00</span>
+          </div>
+
+          <div class="panel">
+            <div class="panel-row">
+              <label class="field">Velocità
+                <select id="speed">
+                  <option value="0.5">0.5×</option>
+                  <option value="0.6">0.6×</option>
+                  <option value="0.7">0.7×</option>
+                  <option value="0.75">0.75×</option>
+                  <option value="0.8">0.8×</option>
+                  <option value="0.9">0.9×</option>
+                  <option value="1" selected>1×</option>
+                  <option value="1.1">1.1×</option>
+                  <option value="1.25">1.25×</option>
+                </select>
+              </label>
+              <label class="field">Capo
+                <select id="capo"></select>
+              </label>
+              <label class="field">Trasponi
+                <select id="transpose"></select>
+              </label>
+            </div>
+            <div class="panel-row">
+              <div class="field">Diagrammi
+                <div class="seg" id="instrument" role="radiogroup">
+                  <button data-v="guitar" role="radio">Chitarra</button>
+                  <button data-v="piano" role="radio">Piano</button>
+                </div>
+              </div>
+              <div class="field">Notazione
+                <div class="seg" id="notation" role="radiogroup">
+                  <button data-v="letters" role="radio">C D E</button>
+                  <button data-v="solfege" role="radio">Do Re Mi</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel loop-panel">
+            <div class="panel-title">
+              <span>Loop</span>
+              <span id="loop-range" class="muted">Trascina sulla griglia per selezionare</span>
+            </div>
+            <div class="panel-row">
+              <button id="loop-toggle" class="btn" disabled>
+                <svg viewBox="0 0 24 24"><path d="M17 2l4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4M21 13v2a3 3 0 0 1-3 3H3"/></svg>
+                <span>Ripeti</span>
+              </button>
+              <button id="set-a" class="btn ghost" title="Inizio loop sulla battuta corrente">A</button>
+              <button id="set-b" class="btn ghost" title="Fine loop sulla battuta corrente">B</button>
+              <button id="loop-clear" class="btn ghost" disabled>Annulla</button>
+            </div>
+          </div>
+
+          <div class="panel stems-panel" id="stems-panel">
+            <div class="panel-title">
+              <span>Tracce separate</span>
+              <span id="stems-status" class="muted"></span>
+            </div>
+            <div id="stems-idle">
+              <p class="muted small">Separa voce, batteria, basso, chitarra, piano e "altro" (synth, organi, archi…). Richiede 1–3 minuti la prima volta.</p>
+              <button id="stems-start" class="btn">Separa le tracce</button>
+            </div>
+            <div id="stems-progress" class="progress-line" hidden>
+              <div class="bar"><div id="stems-bar"></div></div>
+              <span id="stems-msg" class="muted small"></span>
+            </div>
+            <div id="stems-ready" hidden>
+              <label class="switch">
+                <input type="checkbox" id="stems-enable">
+                <span class="track"></span>
+                <span>Ascolta dalle tracce separate</span>
+              </label>
+              <div class="presets" id="stems-presets">
+                <button class="chip" data-preset="all">Tutte</button>
+                <button class="chip" data-preset="keys">Solo tastiere</button>
+                <button class="chip" data-preset="nokeys">Senza tastiere</button>
+                <button class="chip" data-preset="novocals">Senza voce</button>
+              </div>
+              <div id="mixer" class="mixer"></div>
+              <p class="muted small">Il pianoforte finisce nella traccia "Piano"; synth e organi di solito in "Altro". Per le tastiere attivale entrambe.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="splitter" id="splitter" role="separator" aria-orientation="vertical" aria-label="Ridimensiona pannello video" tabindex="0" title="Trascina per ridimensionare · doppio clic per ripristinare"></div>
+
+        <div class="song-right" id="song-right">
+          <div class="now">
+            <div class="now-chord">
+              <div class="now-label">Ora</div>
+              <div id="now-name" class="now-name">—</div>
+            </div>
+            <div id="now-diagram" class="now-diagram"></div>
+            <div class="now-next">
+              <div class="now-label">Poi</div>
+              <div id="next-name" class="next-name">—</div>
+              <div id="next-in" class="muted small"></div>
+            </div>
+            <div class="now-info">
+              <div><span class="muted">Tonalità</span> <b id="info-key">—</b></div>
+              <div><span class="muted">Tempo</span> <b id="info-bpm">—</b></div>
+              <div><span class="muted">Misura</span> <b id="info-bar">—</b></div>
+            </div>
+          </div>
+          <div id="diagrams" class="diagrams"></div>
+          <div id="analysis-state" class="analysis-state" hidden>
+            <div class="spinner"></div>
+            <div id="analysis-msg">Analisi in corso…</div>
+            <div class="bar"><div id="analysis-bar"></div></div>
+            <p class="muted small">Il video è già pronto: puoi ascoltarlo mentre trovo gli accordi.</p>
+          </div>
+          <div id="analysis-error" class="analysis-error" hidden>
+            <p id="analysis-error-msg"></p>
+            <button id="analysis-retry" class="btn">Riprova</button>
+          </div>
+          <div id="grid" class="grid"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="edit-pop" class="edit-pop" hidden>
+    <form id="edit-form">
+      <div class="edit-title">Correggi accordo</div>
+      <input id="edit-input" type="text" spellcheck="false" placeholder="es. Am, F#, Bb7, N">
+      <div id="edit-suggest" class="edit-suggest"></div>
+      <div class="edit-actions">
+        <button type="button" id="edit-reset" class="btn ghost small">Ripristina</button>
+        <button type="button" id="edit-cancel" class="btn ghost small">Annulla</button>
+        <button type="submit" class="btn primary small">Applica</button>
+      </div>
+      <p class="muted small">Vale fino al prossimo cambio di accordo.</p>
+    </form>
+  </div>
+
+  <dialog id="batch-dialog" class="dialog" aria-labelledby="batch-title">
+    <form id="batch-form" method="dialog">
+      <h2 id="batch-title">Aggiungi più brani</h2>
+      <p class="muted small">Incolla i link YouTube, uno per riga (vanno bene anche le playlist). Li scarico in parallelo e li analizzo uno dopo l'altro: intanto puoi continuare a suonare. I brani pronti compaiono in libreria.</p>
+      <textarea id="batch-text" rows="8" spellcheck="false" placeholder="https://www.youtube.com/watch?v=…&#10;https://youtu.be/…&#10;https://www.youtube.com/playlist?list=…"></textarea>
+      <div id="batch-summary" class="muted small">Nessun link.</div>
+      <label class="check"><input type="checkbox" id="batch-stems"> Separa anche le tracce (circa 2 minuti a brano in più)</label>
+      <div class="dialog-actions">
+        <button type="button" id="batch-cancel" class="btn ghost">Annulla</button>
+        <button type="submit" id="batch-submit" class="btn primary" disabled>Aggiungi alla coda</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script type="module" src="js/main.js"></script>
+  <script type="module" src="js/splitter.js"></script>
+</body>
+</html>
